@@ -3,8 +3,8 @@
 
 import six
 from ansible.module_utils.basic import AnsibleModule
-from vdsm import client
-from vdsm import utils
+from vdsm.network import api
+from vdsm.network.nm import networkmanager
 from vdsm.network.canonicalize import canonicalize_bondings
 from vdsm.network.canonicalize import canonicalize_networks
 from vdsm.network.netconfpersistence import RunningConfig
@@ -80,6 +80,12 @@ def _canonicalize_bondings_modes(bondings):
             attrs['options'] = 'mode=0'
 
 
+# TODO: support source routing without service running
+def _setup(networks, bondings, options):
+    networkmanager.init()
+    api.setupNetworks(networks, bondings, options)
+
+
 class Config(object):
 
     def __init__(self, module):
@@ -126,9 +132,7 @@ class Config(object):
         }
 
         try:
-            with utils.closing(client.connect('localhost')) as cli:
-                cli.Host.setupNetworks(
-                    networks=networks, bondings=bondings, options=options)
+            _setup(networks, bondings, options)
         except Exception as e:
             self._module.fail_json(msg=str(e))
 
